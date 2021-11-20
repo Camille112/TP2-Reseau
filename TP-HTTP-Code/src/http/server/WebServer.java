@@ -12,7 +12,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.StringTokenizer;
 
 /**
  * Example program from Chapter 1 Programming Spiders, Bots and Aggregators in
@@ -59,73 +58,94 @@ public class WebServer {
 				// headers.
 				String str = ".";
 				String typeRequest = "";
+				String body = "";
 				File fileCreated = null;
-				boolean body = false;
+				boolean hasBody = false;
 				boolean read = false;
-				while ((str != null && !str.equals("")) || body || read) {
+				int contentLength = 0;
+				int currentLength = 0;
+				//while (i<70) {
+				while ((str != null && !str.equals("")) || hasBody || read) {
 					System.out.println("read : " + read);
-					System.out.println("body : " + body);
-					str = in.readLine();
-					System.out.println("received : " + str);
-					if (str != null && !str.equals("")) {
-						String[] words = str.split(" ");
-						if (words[0].toUpperCase().equals("GET")) {
-							if (words[1].contains("text")) {
+					System.out.println("body : " + hasBody);
+					if (!read) { 
+						str = in.readLine();
+						System.out.println("received : " + str);
+						if (str != null && !str.equals("")) {
+							String[] words = str.split(" ");
+							if (words[0].toUpperCase().equals("GET")) {
+								if (words[1].contains("text")) {
+									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+									displayText(out, name);
+								} else if (words[1].contains("html")) {
+									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+									displayHtml(out, name);
+								} else if (words[1].equals("/")) {
+									displayIndex(out);
+								} else {
+									displayBadRequest(out);
+								}
+							} else if (words[0].toUpperCase().equals("DELETE")) {
 								String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-								displayText(out, name);
-							} else if (words[1].contains("html")) {
-								String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-								displayHtml(out, name);
-							} else if (words[1].equals("/")) {
-								displayIndex(out);
-							} else {
-								displayBadRequest(out);
+								File file = null;
+								if (words[1].contains("text")) {
+									file = new File("../ressources/" + name + ".txt");
+								} else if (words[1].contains("html")) {
+									file = new File("../ressources/" + name + ".html");
+								} else {
+									displayBadRequest(out);
+								}
+								System.out.println("EXISTS" + file.exists());
+								if (file != null && file.delete()) {
+									System.out.println("success");
+									displayDelete(out);
+								} else {
+									System.out.println("fail");
+									displayNotFound(out);
+								}
+							} else if (words[0].toUpperCase().equals("PUT")) {
+								typeRequest = "PUT";
+								hasBody = true;
+								currentLength=0;
+								if (words[1].contains("text")) {
+									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+									fileCreated = putText(out, name);
+								} else if (words[1].contains("html")) {
+									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+									putHtml(out, name);
+								} else if (words[1].equals("/")) {
+									displayIndex(out);
+								} else {
+									displayBadRequest(out);
+								}
+							} else if (words[0].toLowerCase().contains("content-length")){
+								contentLength = Integer.valueOf(words[1]);
+								System.out.println("CONTENTLENGTH"+contentLength);
 							}
-						} else if (words[0].toUpperCase().equals("DELETE")) {
-							String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-							File file = null;
-							if (words[1].contains("text")) {
-								file = new File("../ressources/" + name + ".txt");
-							} else if (words[1].contains("html")) {
-								file = new File("../ressources/" + name + ".html");
-							} else {
-								displayBadRequest(out);
-							}
-							System.out.println("EXISTS" + file.exists());
-							if (file != null && file.delete()) {
-								System.out.println("success");
-								displayDelete(out);
-							} else {
-								System.out.println("fail");
-								displayNotFound(out);
-							}
-						} else if (words[0].toUpperCase().equals("PUT")) {
-							typeRequest = "PUT";
-							body = true;
-							if (words[1].contains("text")) {
-								String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-								fileCreated = putText(out, name);
-							} else if (words[1].contains("html")) {
-								String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-								putHtml(out, name);
-							} else if (words[1].equals("/")) {
-								displayIndex(out);
-							} else {
-								displayBadRequest(out);
-							}
-						} else if (read){
-							System.out.println("STRINNNNG:" + str);
-							addText(fileCreated,str);
+						} else if (hasBody){
+							System.out.println("READ = TRUE");
+							read = true;
+							hasBody = false;
 						}
-					} else if (read) {
-						System.out.println("READ = FALSE");
+					}else {
+						/*
+						currentLength++;
+						char character = (char)in.read();
+						body +=character;
+						if (currentLength == contentLength) {
+							addText(fileCreated,body);
+							read = false;
+						}*/
+						char[] buffer = new char[contentLength];
+						while (currentLength < contentLength) {
+						  currentLength += in.read(buffer, currentLength, contentLength-currentLength);
+						}
+						body = new String(buffer);
+						addText(fileCreated,body);
 						read = false;
-					} else {
-						System.out.println("READ = TRUE");
-						read = true;
-						body = false;
 					}
 					System.out.println("String:" + str);
+					System.out.println("CONTENTLENGTH"+contentLength);
 				}
 				remote.close();
 			} catch (Exception e) {
