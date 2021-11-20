@@ -64,6 +64,7 @@ public class WebServer {
 				boolean read = false;
 				while ((str != null && !str.equals("")) || body || read) {
 					System.out.println("read : " + read);
+					System.out.println("body : " + body);
 					str = in.readLine();
 					System.out.println("received : " + str);
 					if (str != null && !str.equals("")) {
@@ -112,18 +113,17 @@ public class WebServer {
 							} else {
 								displayBadRequest(out);
 							}
-						} else if (str == null || str.equals("")){
-							System.out.println("READ = TRUE");
-							read = true;
-							body = false;
-						} else if (read) {
-							if (str == null || str.equals("")){
-								read = false;
-							} else {
-								System.out.println("STRINNNNG:" + str);
-								addText(fileCreated,str);
-							}
+						} else if (read){
+							System.out.println("STRINNNNG:" + str);
+							addText(fileCreated,str);
 						}
+					} else if (read) {
+						System.out.println("READ = FALSE");
+						read = false;
+					} else {
+						System.out.println("READ = TRUE");
+						read = true;
+						body = false;
 					}
 					System.out.println("String:" + str);
 				}
