@@ -3,6 +3,7 @@
 package http.server;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -74,6 +75,24 @@ public class WebServer {
                             		displayBadRequest(out);
                             	}
                             	break;
+                            }else if (words[0].toUpperCase().equals("DELETE")) {
+                            	String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+                            	File file = null;
+                            	if (words[1].contains("text")) {
+                                	file = new File("../ressources/"+name+".txt");
+                            	}else if (words[1].contains("html")){
+                                	file = new File("../ressources/"+name+".html");
+                            	} else {
+                            		displayBadRequest(out);
+                            	}
+                            	System.out.println("EXISTS"+file.exists());
+                            	if (file != null && file.delete()) {
+                            		System.out.println("success");
+                            		displayDelete(out);
+                            	} else {
+                            		System.out.println("fail");
+                            		displayNotFound(out);
+                            	}
                             }
                         }
                     }
@@ -108,6 +127,13 @@ public class WebServer {
 		out.println("HTTP/1.0 404");
 		out.println("");
 		out.println("<H1>404 Not found</H1>");
+		out.flush();
+	}
+	
+	public void displayDelete(PrintWriter out) {
+		out.println("HTTP/1.0 200");
+		out.println("");
+		out.println("<H1>File deleted</H1>");
 		out.flush();
 	}
 	
