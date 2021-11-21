@@ -147,6 +147,37 @@ public class WebServer {
 							} else if (words[0].toLowerCase().contains("content-length")){
 								contentLength = Integer.valueOf(words[1]);
 								System.out.println("CONTENTLENGTH"+contentLength);
+							} else if (words[0].toUpperCase().equals("POST")){
+								typeRequest = "POST";
+								hasBody = true;
+								currentLength=0;
+								if (words[1].contains("text")) {
+									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+									fileCreated = new File("../ressources/" + name + ".txt");
+									fileType = "txt";
+									try {
+										if (fileCreated.createNewFile()) {
+											newFileCreated = true;
+										}
+									} catch (Exception e) {
+										displayErrorCreate(out);
+									}
+								} else if (words[1].contains("html")) {
+									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+									fileCreated = new File("../ressources/" + name + ".html");
+									fileType = "html";
+									try {
+										if (fileCreated.createNewFile()) {
+											newFileCreated = true;
+										}
+									} catch (Exception e) {
+										displayErrorCreate(out);
+									}
+								} else if (words[1].equals("/")) {
+									displayIndex(out);
+								} else {
+									displayBadRequest(out);
+								}
 							}
 						} else if (hasBody){
 							System.out.println("READ = TRUE");
@@ -168,39 +199,7 @@ public class WebServer {
 						}
 						body = new String(buffer);
 						addText(fileCreated,body);
-						if (newFileCreated) {
-							if (fileType == "txt") {
-								out.println("HTTP/1.0 201 OK");
-								out.println("Content-Type: text");
-								out.println("Server: Bot");
-								out.println("");
-								out.println("<H1>Text created</H1>");
-								out.flush();
-							}else {
-								out.println("HTTP/1.0 201 OK");
-								out.println("Content-Type: html");
-								out.println("Server: Bot");
-								out.println("");
-								out.println("<H1>Html created</H1>");
-								out.flush();
-							}
-						} else {
-							if (fileType == "txt") {
-								out.println("HTTP/1.0 200 OK");
-								out.println("Content-Type: text");
-								out.println("Server: Bot");
-								out.println("");
-								out.println("<H1>Text modified</H1>");
-								out.flush();
-							}else {
-								out.println("HTTP/1.0 200 OK");
-								out.println("Content-Type: html");
-								out.println("Server: Bot");
-								out.println("");
-								out.println("<H1>Html modified</H1>");
-								out.flush();
-							}
-						}
+						displayPutFile(out,newFileCreated, fileType);
 						read = false;
 						newFileCreated=false;
 					}
@@ -290,7 +289,7 @@ public class WebServer {
 		}
 	}
 
-	
+	/*
 	public void addText(File file, String newString) {
 		try {
 		    BufferedWriter writer = new BufferedWriter(new FileWriter(file));
@@ -298,25 +297,41 @@ public class WebServer {
 		    writer.close();
 		}catch(Exception e) {
 		}
-	}
+	}*/
+	
+	
+	public void addText(File file, String newString) {
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file,true));
+            writer.append(newString+"\n");
+            writer.close();
+        }catch(Exception e) {
+        }
+    }
 
 
-	public void putHtml(PrintWriter out, String name) {
-		File fileName = new File("../ressources/" + name + ".html");
-		try {
-			if (fileName.createNewFile()) {
+	public void displayPutFile(PrintWriter out, boolean newFileCreated, String type) {
+			String string="";
+			if (newFileCreated) {
+				string = "created";
 				out.println("HTTP/1.0 201 OK");
-				out.println("Content-Type: html");
-				out.println("Server: Bot");
-				out.println("");
-				out.println("<H1>Text created</H1>");
-				out.flush();
-			} else {
-				displayErrorCreate(out);
+			}else {
+				string = "modified";
+				out.println("HTTP/1.0 200 OK");
 			}
-		} catch (Exception e) {
-			displayErrorCreate(out);
-		}
+			if (type == "txt") {
+				out.println("Content-Type: text");
+			} else {
+				out.println("Content-Type: html");
+			}
+			out.println("Server: Bot");
+			out.println("");
+			if (type == "txt") {
+				out.println("<H1>Text "+string+"</H1>");
+			}else {
+				out.println("<H1>Html "+string+"</H1>");
+			}
+			out.flush();
 	}
 
 	/**
