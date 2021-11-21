@@ -12,6 +12,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Example program from Chapter 1 Programming Spiders, Bots and Aggregators in
@@ -78,16 +80,28 @@ public class WebServer {
 							if (words[0].toUpperCase().equals("GET")) {
 								if (words[1].contains("text")) {
 									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									displayText(out, name);
+									getText(out, name);
 								} else if (words[1].contains("html")) {
 									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									displayHtml(out, name);
+									getHtml(out, name);
 								} else if (words[1].equals("/")) {
-									displayIndex(out);
+									getIndex(out);
 								} else {
 									displayBadRequest(out);
 								}
-							} else if (words[0].toUpperCase().equals("DELETE")) {
+							} else if (words[0].toUpperCase().equals("HEAD")) {
+								if (words[1].contains("text")) {
+									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+									headText(out, name);
+								} else if (words[1].contains("html")) {
+									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+									headHtml(out, name);
+								} else if (words[1].equals("/")) {
+									getIndex(out);
+								} else {
+									displayBadRequest(out);
+								}
+							}else if (words[0].toUpperCase().equals("DELETE")) {
 								String name = words[1].substring(words[1].lastIndexOf("/") + 1);
 								File file = null;
 								if (words[1].contains("text")) {
@@ -140,7 +154,7 @@ public class WebServer {
 										displayErrorCreate(out);
 									}
 								} else if (words[1].equals("/")) {
-									displayIndex(out);
+									getIndex(out);
 								} else {
 									displayBadRequest(out);
 								}
@@ -174,7 +188,7 @@ public class WebServer {
 										displayErrorCreate(out);
 									}
 								} else if (words[1].equals("/")) {
-									displayIndex(out);
+									getIndex(out);
 								} else {
 									displayBadRequest(out);
 								}
@@ -213,7 +227,7 @@ public class WebServer {
 		}
 	}
 
-	public void displayIndex(PrintWriter out) {
+	public void getIndex(PrintWriter out) {
 		out.println("HTTP/1.0 200 OK");
 		out.println("Content-Type: html");
 		out.println("Server: Bot");
@@ -252,7 +266,7 @@ public class WebServer {
 		out.flush();
 	}
 
-	public void displayText(PrintWriter out, String name) {
+	public void getText(PrintWriter out, String name) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader("../ressources/" + name + ".txt"));
 			String line;
@@ -271,7 +285,7 @@ public class WebServer {
 		}
 	}
 
-	public void displayHtml(PrintWriter out, String name) {
+	public void getHtml(PrintWriter out, String name) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader("../ressources/" + name + ".html"));
 			String line;
@@ -283,6 +297,42 @@ public class WebServer {
 			while ((line = br.readLine()) != null || line == "") {
 				out.println(line);
 			}
+			out.flush();
+		} catch (Exception e) {
+			displayNotFound(out);
+		}
+	}
+	
+	public void headText(PrintWriter out, String name) {
+		try {
+			File text = new File("../ressources/" + name + ".txt");
+			String length = String.valueOf(text.length());;
+			Path path = text.toPath();
+		    String mimeType = Files.probeContentType(path);
+		    
+			out.println("HTTP/1.0 200 OK");
+			out.println("Content-Type: " + mimeType);
+			out.println("Content-Length: "+ length);
+			out.println("Server: Bot");
+			out.println("");
+			out.flush();
+		} catch (Exception e) {
+			displayNotFound(out);
+		}
+	}
+	
+	public void headHtml(PrintWriter out, String name) {
+		try {
+			File html = new File("../ressources/" + name + ".html");
+			String length = String.valueOf(html.length());
+			Path path = html.toPath();
+		    String mimeType = Files.probeContentType(path);
+		    
+			out.println("HTTP/1.0 200 OK");
+			out.println("Content-Type: " + mimeType);
+			out.println("Content-Length: "+length);
+			out.println("Server: Bot");
+			out.println("");
 			out.flush();
 		} catch (Exception e) {
 			displayNotFound(out);
