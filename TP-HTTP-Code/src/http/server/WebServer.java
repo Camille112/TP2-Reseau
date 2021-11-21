@@ -59,9 +59,11 @@ public class WebServer {
 				String str = ".";
 				String typeRequest = "";
 				String body = "";
+				String fileType = "";
 				File fileCreated = null;
 				boolean hasBody = false;
 				boolean read = false;
+				boolean newFileCreated = false;
 				int contentLength = 0;
 				int currentLength = 0;
 				//while (i<70) {
@@ -109,10 +111,34 @@ public class WebServer {
 								currentLength=0;
 								if (words[1].contains("text")) {
 									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									fileCreated = putText(out, name);
+									fileCreated = new File("../ressources/" + name + ".txt");
+									fileType = "txt";
+									try {
+										if (fileCreated.createNewFile()) {
+											newFileCreated = true;
+										} else {
+											PrintWriter writer = new PrintWriter(fileCreated);
+											writer.print("");
+											writer.close();
+										}
+									} catch (Exception e) {
+										displayErrorCreate(out);
+									}
 								} else if (words[1].contains("html")) {
 									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									putHtml(out, name);
+									fileCreated = new File("../ressources/" + name + ".html");
+									fileType = "html";
+									try {
+										if (fileCreated.createNewFile()) {
+											newFileCreated = true;
+										} else {
+											PrintWriter writer = new PrintWriter(fileCreated);
+											writer.print("");
+											writer.close();
+										}
+									} catch (Exception e) {
+										displayErrorCreate(out);
+									}
 								} else if (words[1].equals("/")) {
 									displayIndex(out);
 								} else {
@@ -142,7 +168,41 @@ public class WebServer {
 						}
 						body = new String(buffer);
 						addText(fileCreated,body);
+						if (newFileCreated) {
+							if (fileType == "txt") {
+								out.println("HTTP/1.0 201 OK");
+								out.println("Content-Type: text");
+								out.println("Server: Bot");
+								out.println("");
+								out.println("<H1>Text created</H1>");
+								out.flush();
+							}else {
+								out.println("HTTP/1.0 201 OK");
+								out.println("Content-Type: html");
+								out.println("Server: Bot");
+								out.println("");
+								out.println("<H1>Html created</H1>");
+								out.flush();
+							}
+						} else {
+							if (fileType == "txt") {
+								out.println("HTTP/1.0 200 OK");
+								out.println("Content-Type: text");
+								out.println("Server: Bot");
+								out.println("");
+								out.println("<H1>Text modified</H1>");
+								out.flush();
+							}else {
+								out.println("HTTP/1.0 200 OK");
+								out.println("Content-Type: html");
+								out.println("Server: Bot");
+								out.println("");
+								out.println("<H1>Html modified</H1>");
+								out.flush();
+							}
+						}
 						read = false;
+						newFileCreated=false;
 					}
 					System.out.println("String:" + str);
 					System.out.println("CONTENTLENGTH"+contentLength);
@@ -230,32 +290,6 @@ public class WebServer {
 		}
 	}
 
-	public File putText(PrintWriter out, String name) {
-		File file = new File("../ressources/" + name + ".txt");
-		try {
-			if (file.createNewFile()) {
-				out.println("HTTP/1.0 201 OK");
-				out.println("Content-Type: text");
-				out.println("Server: Bot");
-				out.println("");
-				out.println("<H1>Text created</H1>");
-				out.flush();
-			} else {
-				PrintWriter writer = new PrintWriter(file);
-				writer.print("");
-				writer.close();
-				out.println("HTTP/1.0 204 OK");
-				out.println("Content-Type: text");
-				out.println("Server: Bot");
-				out.println("");
-				out.println("<H1>Text modified</H1>");
-				out.flush();
-			}
-		} catch (Exception e) {
-			displayErrorCreate(out);
-		}
-		return file;
-	}
 	
 	public void addText(File file, String newString) {
 		try {
