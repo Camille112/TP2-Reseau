@@ -4,16 +4,19 @@ package http.server;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
 
 /**
  * Example program from Chapter 1 Programming Spiders, Bots and Aggregators in
@@ -30,7 +33,7 @@ public class WebServer {
 	/**
 	 * WebServer constructor.
 	 */
-		
+
 	protected void start() {
 		ServerSocket s;
 
@@ -68,65 +71,73 @@ public class WebServer {
 				boolean newFileCreated = false;
 				int contentLength = 0;
 				int currentLength = 0;
-				//while (i<70) {
+				// while (i<70) {
 				while ((str != null && !str.equals("")) || hasBody || read) {
-					System.out.println("read : " + read);
-					System.out.println("body : " + hasBody);
-					if (!read) { 
+					if (!read) {
 						str = in.readLine();
 						System.out.println("received : " + str);
 						if (str != null && !str.equals("")) {
 							String[] words = str.split(" ");
 							if (words[0].toUpperCase().equals("GET")) {
-								if (words[1].contains("text")) {
-									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+								String name = words[1];
+								if (words[1].contains("txt")) {
+									// String name = words[1].substring(words[1].lastIndexOf("/") + 1);
 									getText(out, name);
 								} else if (words[1].contains("html")) {
-									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
 									getHtml(out, name);
+								} else if (words[1].contains("jpg") || words[1].contains("png")) {
+									String baliseImage = "<img src=\"data:image/png;base64,";
+
+									byte[] bytes = Files.readAllBytes(Paths.get("../ressources/" + name));
+									String encodedString = Base64.getMimeEncoder().encodeToString(bytes);
+
+									baliseImage += encodedString;
+									baliseImage += "\" />";
+
+									out.println("HTTP/1.0 200 OK");
+									out.println("Content-Type: html");
+									out.println("Server: Bot");
+									out.println("");
+									out.println(baliseImage);
+									out.flush();
+
 								} else if (words[1].equals("/")) {
 									getIndex(out);
 								} else {
 									displayBadRequest(out);
 								}
 							} else if (words[0].toUpperCase().equals("HEAD")) {
-								if (words[1].contains("text")) {
-									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									headText(out, name);
-								} else if (words[1].contains("html")) {
-									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									headHtml(out, name);
+								String name = words[1];
+								if (words[1].contains("txt") || words[1].contains("html") || words[1].contains("png")
+										|| words[1].contains("jpg")) {
+									head(out, name);
 								} else if (words[1].equals("/")) {
 									getIndex(out);
 								} else {
-									displayBadRequest(out);
+									out.println("HTTP/1.0 500");
+									out.flush();
 								}
-							}else if (words[0].toUpperCase().equals("DELETE")) {
-								String name = words[1].substring(words[1].lastIndexOf("/") + 1);
+							} else if (words[0].toUpperCase().equals("DELETE")) {
+								String name = words[1];
 								File file = null;
-								if (words[1].contains("text")) {
-									file = new File("../ressources/" + name + ".txt");
-								} else if (words[1].contains("html")) {
-									file = new File("../ressources/" + name + ".html");
+								if (words[1].contains("txt") || words[1].contains("html") || words[1].contains("png")
+										|| words[1].contains("jpg")) {
+									file = new File("../ressources/" + name);
+									if (file.exists() && file.delete()) {
+										displayDelete(out);
+									} else {
+										displayNotFound(out);
+									}
 								} else {
 									displayBadRequest(out);
-								}
-								System.out.println("EXISTS" + file.exists());
-								if (file != null && file.delete()) {
-									System.out.println("success");
-									displayDelete(out);
-								} else {
-									System.out.println("fail");
-									displayNotFound(out);
 								}
 							} else if (words[0].toUpperCase().equals("PUT")) {
-								typeRequest = "PUT";
-								hasBody = true;
-								currentLength=0;
-								if (words[1].contains("text")) {
-									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									fileCreated = new File("../ressources/" + name + ".txt");
-									fileType = "txt";
+								currentLength = 0;
+								String name = words[1];
+								if (words[1].contains("txt") || words[1].contains("html")) {
+									typeRequest = "PUT";
+									hasBody = true;
+									fileCreated = new File("../ressources/" + name);
 									try {
 										if (fileCreated.createNewFile()) {
 											newFileCreated = true;
@@ -138,36 +149,26 @@ public class WebServer {
 									} catch (Exception e) {
 										displayErrorCreate(out);
 									}
-								} else if (words[1].contains("html")) {
-									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									fileCreated = new File("../ressources/" + name + ".html");
-									fileType = "html";
-									try {
-										if (fileCreated.createNewFile()) {
-											newFileCreated = true;
-										} else {
-											PrintWriter writer = new PrintWriter(fileCreated);
-											writer.print("");
-											writer.close();
-										}
-									} catch (Exception e) {
-										displayErrorCreate(out);
+
+									if (words[1].contains("txt")) {
+										fileType = "txt";
+									} else if (words[1].contains("html")) {
+										fileType = "html";
 									}
 								} else if (words[1].equals("/")) {
 									getIndex(out);
 								} else {
 									displayBadRequest(out);
 								}
-							} else if (words[0].toLowerCase().contains("content-length")){
+							} else if (words[0].toLowerCase().contains("content-length")) {
 								contentLength = Integer.valueOf(words[1]);
-								System.out.println("CONTENTLENGTH"+contentLength);
-							} else if (words[0].toUpperCase().equals("POST")){
-								typeRequest = "POST";
-								hasBody = true;
-								currentLength=0;
-								if (words[1].contains("text")) {
-									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									fileCreated = new File("../ressources/" + name + ".txt");
+							} else if (words[0].toUpperCase().equals("POST")) {
+								currentLength = 0;
+								String name = words[1];
+								if (words[1].contains("txt") || words[1].contains("html")) {
+									typeRequest = "POST";
+									hasBody = true;
+									fileCreated = new File("../ressources/" + name);
 									fileType = "txt";
 									try {
 										if (fileCreated.createNewFile()) {
@@ -176,16 +177,10 @@ public class WebServer {
 									} catch (Exception e) {
 										displayErrorCreate(out);
 									}
-								} else if (words[1].contains("html")) {
-									String name = words[1].substring(words[1].lastIndexOf("/") + 1);
-									fileCreated = new File("../ressources/" + name + ".html");
-									fileType = "html";
-									try {
-										if (fileCreated.createNewFile()) {
-											newFileCreated = true;
-										}
-									} catch (Exception e) {
-										displayErrorCreate(out);
+									if (words[1].contains("txt")) {
+										fileType = "txt";
+									} else if (words[1].contains("html")) {
+										fileType = "html";
 									}
 								} else if (words[1].equals("/")) {
 									getIndex(out);
@@ -193,32 +188,25 @@ public class WebServer {
 									displayBadRequest(out);
 								}
 							}
-						} else if (hasBody){
-							System.out.println("READ = TRUE");
+						} else if (hasBody) {
 							read = true;
 							hasBody = false;
 						}
-					}else {
+					} else {
 						/*
-						currentLength++;
-						char character = (char)in.read();
-						body +=character;
-						if (currentLength == contentLength) {
-							addText(fileCreated,body);
-							read = false;
-						}*/
+						 * currentLength++; char character = (char)in.read(); body +=character; if
+						 * (currentLength == contentLength) { addText(fileCreated,body); read = false; }
+						 */
 						char[] buffer = new char[contentLength];
 						while (currentLength < contentLength) {
-						  currentLength += in.read(buffer, currentLength, contentLength-currentLength);
+							currentLength += in.read(buffer, currentLength, contentLength - currentLength);
 						}
 						body = new String(buffer);
-						addText(fileCreated,body);
-						displayPutFile(out,newFileCreated, fileType);
+						addText(fileCreated, body);
+						displayPutFile(out, newFileCreated, fileType);
 						read = false;
-						newFileCreated=false;
+						newFileCreated = false;
 					}
-					System.out.println("String:" + str);
-					System.out.println("CONTENTLENGTH"+contentLength);
 				}
 				remote.close();
 			} catch (Exception e) {
@@ -268,7 +256,7 @@ public class WebServer {
 
 	public void getText(PrintWriter out, String name) {
 		try {
-			BufferedReader br = new BufferedReader(new FileReader("../ressources/" + name + ".txt"));
+			BufferedReader br = new BufferedReader(new FileReader("../ressources/" + name));
 			String line;
 			out.println("HTTP/1.0 200 OK");
 			out.println("Content-Type: text");
@@ -287,7 +275,7 @@ public class WebServer {
 
 	public void getHtml(PrintWriter out, String name) {
 		try {
-			BufferedReader br = new BufferedReader(new FileReader("../ressources/" + name + ".html"));
+			BufferedReader br = new BufferedReader(new FileReader("../ressources/" + name));
 			String line;
 			out.println("HTTP/1.0 200 OK");
 			out.println("Content-Type: html");
@@ -302,86 +290,69 @@ public class WebServer {
 			displayNotFound(out);
 		}
 	}
-	
-	public void headText(PrintWriter out, String name) {
+
+	public void head(PrintWriter out, String name) {
 		try {
-			File text = new File("../ressources/" + name + ".txt");
-			String length = String.valueOf(text.length());;
-			Path path = text.toPath();
-		    String mimeType = Files.probeContentType(path);
-		    
-			out.println("HTTP/1.0 200 OK");
-			out.println("Content-Type: " + mimeType);
-			out.println("Content-Length: "+ length);
-			out.println("Server: Bot");
-			out.println("");
-			out.flush();
-		} catch (Exception e) {
-			displayNotFound(out);
-		}
-	}
-	
-	public void headHtml(PrintWriter out, String name) {
-		try {
-			File html = new File("../ressources/" + name + ".html");
-			String length = String.valueOf(html.length());
-			Path path = html.toPath();
-		    String mimeType = Files.probeContentType(path);
-		    
-			out.println("HTTP/1.0 200 OK");
-			out.println("Content-Type: " + mimeType);
-			out.println("Content-Length: "+length);
-			out.println("Server: Bot");
-			out.println("");
-			out.flush();
+			File text = new File("../ressources/" + name);
+			if (text.exists()) {
+				String length = String.valueOf(text.length());
+				;
+				Path path = text.toPath();
+				String mimeType = Files.probeContentType(path);
+
+				out.println("HTTP/1.0 200 OK");
+				out.println("Content-Type: " + mimeType);
+				out.println("Content-Length: " + length);
+				out.println("Server: Bot");
+				out.println("");
+				out.flush();
+			} else {
+				out.println("HTTP/1.0 404");
+				out.println("");
+				out.flush();
+			}
 		} catch (Exception e) {
 			displayNotFound(out);
 		}
 	}
 
 	/*
+	 * public void addText(File file, String newString) { try { BufferedWriter
+	 * writer = new BufferedWriter(new FileWriter(file)); writer.append(newString);
+	 * writer.close(); }catch(Exception e) { } }
+	 */
+
 	public void addText(File file, String newString) {
 		try {
-		    BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-		    writer.append(newString);
-		    writer.close();
-		}catch(Exception e) {
+			BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
+			writer.append(newString + "\n");
+			writer.close();
+		} catch (Exception e) {
 		}
-	}*/
-	
-	
-	public void addText(File file, String newString) {
-        try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file,true));
-            writer.append(newString+"\n");
-            writer.close();
-        }catch(Exception e) {
-        }
-    }
-
+	}
 
 	public void displayPutFile(PrintWriter out, boolean newFileCreated, String type) {
-			String string="";
-			if (newFileCreated) {
-				string = "created";
-				out.println("HTTP/1.0 201 OK");
-			}else {
-				string = "modified";
-				out.println("HTTP/1.0 200 OK");
-			}
-			if (type == "txt") {
-				out.println("Content-Type: text");
-			} else {
-				out.println("Content-Type: html");
-			}
-			out.println("Server: Bot");
-			out.println("");
-			if (type == "txt") {
-				out.println("<H1>Text "+string+"</H1>");
-			}else {
-				out.println("<H1>Html "+string+"</H1>");
-			}
-			out.flush();
+		String string = "";
+		if (newFileCreated) {
+			string = "created";
+			out.println("HTTP/1.0 201 OK");
+		} else {
+			string = "modified";
+			out.println("HTTP/1.0 200 OK");
+		}
+		if (type == "txt") {
+			out.println("Content-Type: text");
+		} else {
+			out.println("Content-Type: html");
+		}
+		out.println("Server: Bot");
+		out.println("");
+		if (type == "txt") {
+			out.println("<H1>Text " + string + "</H1>");
+		} else {
+			out.println("<H1>Html " + string + "</H1>");
+		}
+		out.flush();
 	}
 
 	/**
