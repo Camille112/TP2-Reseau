@@ -1,6 +1,4 @@
-///A Simple Web Server (WebServer.java)
-
-package http.server;
+  package http.server;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -23,19 +21,24 @@ import java.util.Base64;
  * WebServer is a very simple web-server. Any request is responded with a very
  * simple web-page.
  * 
- * @author Jeff Heaton
- * @version 1.0
+ * Modification by Camille Migozzi and Karina Du :
+ * Handling of GET, HEAD, POST, PUT, DELETE requests.
+ * 
+ * @author Jeff Heaton, Camille Migozzi, Karina Du
+ * @version 1.1
  */
+
 public class WebServer {
 
 	/**
 	 * WebServer constructor.
+	 * Start a server HTTP which read the requests and send a convenient response. 
 	 */
 
 	protected void start() {
 		ServerSocket s;
 
-		System.out.println("Webserver starting up on port 80");
+		System.out.println("Webserver starting up on port 3000");
 		System.out.println("(press ctrl-c to exit)");
 		try {
 			// create the main server socket
@@ -68,11 +71,9 @@ public class WebServer {
 				boolean newFileCreated = false;
 				int contentLength = 0;
 				int currentLength = 0;
-				// while (i<70) {
 				while ((str != null && !str.equals("")) || hasBody || read) {
 					if (!read) {
 						str = in.readLine();
-						System.out.println("received : " + str);
 						if (str != null && !str.equals("")) {
 							String[] words = str.split(" ");
 							String name = words[1];
@@ -191,10 +192,6 @@ public class WebServer {
 							hasBody = false;
 						}
 					} else {
-						/*
-						 * currentLength++; char character = (char)in.read(); body +=character; if
-						 * (currentLength == contentLength) { addText(fileCreated,body); read = false; }
-						 */
 						char[] buffer = new char[contentLength];
 						while (currentLength < contentLength) {
 							currentLength += in.read(buffer, currentLength, contentLength - currentLength);
@@ -213,6 +210,12 @@ public class WebServer {
 		}
 	}
 
+	/**
+	 * This method creates the header and the information displayed on the page when the request is GET /. It shows the page index.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * 
+	 */
 	public void getIndex(PrintWriter out) {
 		out.println("HTTP/1.0 200 OK");
 		out.println("Content-Type: html");
@@ -222,6 +225,12 @@ public class WebServer {
 		out.flush();
 	}
 
+	/**
+	 * This method creates the header and the information displayed on the page when there is a bad request.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * 
+	 */
 	public void displayBadRequest(PrintWriter out) {
 		out.println("HTTP/1.0 500");
 		// this blank line signals the end of the headers
@@ -231,6 +240,12 @@ public class WebServer {
 		out.flush();
 	}
 
+	/**
+	 * This method creates the header and the information displayed on the page when the request concerns a file not found.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * 
+	 */
 	public void displayNotFound(PrintWriter out) {
 		out.println("HTTP/1.0 404");
 		out.println("");
@@ -238,6 +253,12 @@ public class WebServer {
 		out.flush();
 	}
 
+	/**
+	 * This method creates the header and the information displayed on the page when the request couldn't create a file.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * 
+	 */
 	public void displayErrorCreate(PrintWriter out) {
 		out.println("HTTP/1.0 400");
 		out.println("");
@@ -245,6 +266,12 @@ public class WebServer {
 		out.flush();
 	}
 
+	/**
+	 * This method creates the header and the information displayed on the page when the request delete a file.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * 
+	 */
 	public void displayDelete(PrintWriter out) {
 		out.println("HTTP/1.0 200");
 		out.println("");
@@ -252,6 +279,13 @@ public class WebServer {
 		out.flush();
 	}
 
+	/**
+	 * This method creates the header and the information displayed on the page when the request is to get a text file.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * @param name The name of the text file.
+	 * 
+	 */
 	public void getText(PrintWriter out, String name) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader("../ressources/" + name));
@@ -270,7 +304,14 @@ public class WebServer {
 			displayNotFound(out);
 		}
 	}
-
+	
+	/**
+	 * This method creates the header and the information displayed on the page when the request is to get a html file.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * @param name The name of the html file.
+	 * 
+	 */
 	public void getHtml(PrintWriter out, String name) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader("../ressources/" + name));
@@ -289,6 +330,13 @@ public class WebServer {
 		}
 	}
 
+	/**
+	 * This method creates the header and the information displayed on the page when the request is to get the head of a file.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * @param name The name of the file.
+	 * 
+	 */
 	public void head(PrintWriter out, String name) {
 		try {
 			File text = new File("../ressources/" + name);
@@ -312,7 +360,14 @@ public class WebServer {
 			displayNotFound(out);
 		}
 	}
-
+	
+	/**
+	 * This method adds a text to a file.
+	 * 
+	 * @param file The file in which you want to add a text.
+	 * @param newString The string you want to add in the file.
+	 * 
+	 */
 	public void addText(File file, String newString) {
 		try {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
@@ -322,6 +377,14 @@ public class WebServer {
 		}
 	}
 
+	/**
+	 * This method creates the header and the information displayed on the page when the request is to put a file.
+	 * 
+	 * @param out The PrintWriter out prints on the socket remote.
+	 * @param newFileCreated The file created.
+	 * @param nameFile The name of the new file.
+	 * 
+	 */
 	public void displayPutFile(PrintWriter out, boolean newFileCreated, String nameFile) {
 		File file = new File("../ressources/" + nameFile);
 		Path path = file.toPath();
